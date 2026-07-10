@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b1020">
-<title>Space Rover Controller v6</title>
+<title>Space Rover Controller v7</title>
 <style>
 :root {
   color-scheme: dark;
@@ -303,12 +303,111 @@ select {
   #stop { min-width:105px; padding-left:10px; padding-right:10px; }
   header button { padding:10px 11px; font-size:14px; }
 }
+
+.brandline {
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.brandmark {
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  background:linear-gradient(145deg,#6f95ff,#3e66d9);
+  box-shadow:0 8px 24px #3765dc55;
+  font-size:19px;
+}
+.orientation-bar {
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+  margin-bottom:10px;
+  padding:10px 12px;
+  border:1px solid #ffffff12;
+  background:#10182b99;
+  border-radius:15px;
+}
+.orientation-copy {
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+#flipFront.active {
+  background:var(--good);
+  color:#07140d;
+}
+.section-title {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 9px;
+}
+.section-title h2 {
+  margin:0;
+  font-size:15px;
+  letter-spacing:.04em;
+}
+.explorer {
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:8px;
+  align-items:center;
+}
+.sound-id {
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+  font-weight:800;
+  letter-spacing:.05em;
+  padding:11px 8px;
+  border-radius:12px;
+  background:#0d1527;
+  border:1px solid #ffffff14;
+}
+.explorer-actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:8px;
+}
+#saveSound.active {
+  background:var(--good);
+  color:#07140d;
+}
+.saved-sounds {
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:10px;
+}
+.saved-sounds button {
+  background:#18223c;
+  border:1px solid #ffffff16;
+  font-size:12px;
+  padding:8px 10px;
+}
+.small-input {
+  width:100%;
+  background:#0d1527;
+  color:var(--text);
+  border:1px solid #ffffff18;
+  border-radius:11px;
+  padding:10px;
+  font-size:14px;
+}
+
 </style>
 </head>
 <body>
 <main>
 <header>
-  <h1>Space Rover</h1>
+  <div class="brandline" style="flex:1;">
+    <div class="brandmark">🚀</div>
+    <h1>Space Rover</h1>
+  </div>
   <button id="setupBtn" class="secondary">Setup</button>
   <button id="connect">Connect</button>
 </header>
@@ -316,6 +415,14 @@ select {
 <div class="status">
   <span id="dot" class="dot"></span>
   <span id="status">Not connected</span>
+</div>
+
+<div class="orientation-bar">
+  <div>
+    <strong>Robot front</strong>
+    <div class="orientation-copy">Your build faces the opposite direction from our first mapping.</div>
+  </div>
+  <button id="flipFront" class="secondary active">Corrected</button>
 </div>
 
 <section class="card">
@@ -346,7 +453,34 @@ select {
 </section>
 
 <section class="card">
+  <div class="section-title">
+    <h2>ROVER SOUNDS</h2>
+    <span class="orientation-copy">Built-in effects</span>
+  </div>
   <div class="sound-grid" id="sounds"></div>
+</section>
+
+<section class="card">
+  <div class="section-title">
+    <h2>SOUND FINDER</h2>
+    <span class="orientation-copy">Explore IDs safely, one at a time</span>
+  </div>
+
+  <div class="explorer">
+    <button id="soundPrev" class="secondary">◀</button>
+    <div id="soundId" class="sound-id">0x00</div>
+    <button id="soundNext" class="secondary">▶</button>
+  </div>
+
+  <div class="explorer-actions">
+    <button id="playSoundId">Play sound</button>
+    <button id="saveSound" class="secondary">Save ID</button>
+  </div>
+
+  <input id="soundName" class="small-input" maxlength="24" placeholder="Optional name, e.g. Laser" style="margin-top:8px;">
+
+  <div id="savedSounds" class="saved-sounds"></div>
+  <p class="notice">The finder sends only the hub’s sound-command family. It does not auto-scan, so you stay in control of the noise parade.</p>
 </section>
 
 <p class="notice">
@@ -475,7 +609,9 @@ const DEFAULT_CONFIG = {
   armPort: 1,
   rightPort: 2,
   invertLeft: false,
-  invertRight: true
+  invertRight: true,
+  reverseDrive: true,
+  configVersion: 7
 };
 
 let config = loadConfig();
@@ -511,6 +647,16 @@ const oscillateBtn = document.querySelector('#oscillate');
 const soundsEl = document.querySelector('#sounds');
 const invertLeft = document.querySelector('#invertLeft');
 const invertRight = document.querySelector('#invertRight');
+const flipFront = document.querySelector('#flipFront');
+const soundPrev = document.querySelector('#soundPrev');
+const soundNext = document.querySelector('#soundNext');
+const playSoundId = document.querySelector('#playSoundId');
+const saveSoundBtn = document.querySelector('#saveSound');
+const soundIdEl = document.querySelector('#soundId');
+const soundName = document.querySelector('#soundName');
+const savedSoundsEl = document.querySelector('#savedSounds');
+let explorerSoundId = 0;
+let savedSoundIds = loadSavedSounds();
 
 const setupModal = document.querySelector('#setupModal');
 const leftPort = document.querySelector('#leftPort');
@@ -541,7 +687,14 @@ for (const [name, hex] of Object.entries(SOUNDS)) {
 
 function loadConfig() {
   try {
-    return { ...DEFAULT_CONFIG, ...JSON.parse(localStorage.getItem('spaceRoverConfig') || '{}') };
+    const stored = JSON.parse(localStorage.getItem('spaceRoverConfig') || '{}');
+    const merged = { ...DEFAULT_CONFIG, ...stored };
+    if (!stored.configVersion || stored.configVersion < 7) {
+      merged.reverseDrive = true;
+      merged.configVersion = 7;
+      localStorage.setItem('spaceRoverConfig', JSON.stringify(merged));
+    }
+    return merged;
   } catch {
     return { ...DEFAULT_CONFIG };
   }
@@ -554,7 +707,93 @@ function saveConfig() {
 function applyConfigToUI() {
   invertLeft.checked = !!config.invertLeft;
   invertRight.checked = !!config.invertRight;
+  flipFront.classList.toggle('active', !!config.reverseDrive);
+  flipFront.textContent = config.reverseDrive ? 'Corrected' : 'Original';
 }
+
+
+function makeSoundCommand(soundId) {
+  const body = new Uint8Array([0x1E, 0x01, soundId & 0xFF]);
+  const checksum = crc16Xmodem(body) ^ 0x8AA3;
+  return new Uint8Array([...body, (checksum >> 8) & 0xFF, checksum & 0xFF]);
+}
+
+function loadSavedSounds() {
+  try {
+    return JSON.parse(localStorage.getItem('spaceRoverSavedSounds') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedSounds() {
+  localStorage.setItem('spaceRoverSavedSounds', JSON.stringify(savedSoundIds));
+}
+
+function renderSoundExplorer() {
+  soundIdEl.textContent = `0x${explorerSoundId.toString(16).toUpperCase().padStart(2,'0')}`;
+  const existing = savedSoundIds.find(item => item.id === explorerSoundId);
+  saveSoundBtn.classList.toggle('active', !!existing);
+  saveSoundBtn.textContent = existing ? 'Saved' : 'Save ID';
+  if (existing && !soundName.value) soundName.value = existing.name || '';
+}
+
+function renderSavedSounds() {
+  savedSoundsEl.innerHTML = '';
+  for (const item of savedSoundIds) {
+    const b = document.createElement('button');
+    const label = item.name ? `${item.name} · 0x${item.id.toString(16).toUpperCase().padStart(2,'0')}` :
+      `0x${item.id.toString(16).toUpperCase().padStart(2,'0')}`;
+    b.textContent = label;
+    b.onclick = async () => {
+      explorerSoundId = item.id;
+      renderSoundExplorer();
+      if (characteristic) await writeBytes(makeSoundCommand(item.id));
+    };
+    savedSoundsEl.appendChild(b);
+  }
+}
+
+soundPrev.addEventListener('click', () => {
+  explorerSoundId = (explorerSoundId + 255) % 256;
+  soundName.value = '';
+  renderSoundExplorer();
+});
+
+soundNext.addEventListener('click', () => {
+  explorerSoundId = (explorerSoundId + 1) % 256;
+  soundName.value = '';
+  renderSoundExplorer();
+});
+
+playSoundId.addEventListener('click', async () => {
+  if (!characteristic) {
+    setStatus('Connect to the rover before playing sounds');
+    return;
+  }
+  await writeBytes(makeSoundCommand(explorerSoundId));
+  if (navigator.vibrate) navigator.vibrate(15);
+});
+
+saveSoundBtn.addEventListener('click', () => {
+  const existingIndex = savedSoundIds.findIndex(item => item.id === explorerSoundId);
+  if (existingIndex >= 0) {
+    savedSoundIds.splice(existingIndex, 1);
+  } else {
+    savedSoundIds.push({
+      id: explorerSoundId,
+      name: soundName.value.trim()
+    });
+    savedSoundIds.sort((a,b) => a.id - b.id);
+  }
+  persistSavedSounds();
+  renderSoundExplorer();
+  renderSavedSounds();
+});
+
+renderSoundExplorer();
+renderSavedSounds();
+
 
 function setStatus(text, connected=false) {
   statusEl.textContent = text;
@@ -707,6 +946,7 @@ async function connect() {
     forceArmSend = true;
 
     setStatus('Connected', true);
+    if (navigator.vibrate) navigator.vibrate([20,30,20]);
     await emergencyStop();
     startControlLoop();
 
@@ -823,7 +1063,8 @@ function positionFromPointer(event) {
   knob.style.transform = `translate(${dx}px,${dy}px)`;
 
   const x = dx / travel;
-  const y = -dy / travel;
+  let y = -dy / travel;
+  if (config.reverseDrive) y = -y;
 
   if (Math.hypot(x,y) < 0.10) {
     desiredLeft = 0;
@@ -869,6 +1110,14 @@ invertRight.addEventListener('change', () => {
   config.invertRight = invertRight.checked;
   saveConfig();
 });
+flipFront.addEventListener('click', async () => {
+  await emergencyStop();
+  config.reverseDrive = !config.reverseDrive;
+  saveConfig();
+  applyConfigToUI();
+  if (navigator.vibrate) navigator.vibrate(20);
+});
+
 
 setupBtn.addEventListener('click', () => {
   leftPort.value = String(config.leftPort);
@@ -1039,7 +1288,9 @@ nextWizardBtn.addEventListener('click', async () => {
     rightPort:wizardConfig.rightPort,
     armPort:wizardConfig.armPort,
     invertLeft:wizardInvertLeft.checked,
-    invertRight:wizardInvertRight.checked
+    invertRight:wizardInvertRight.checked,
+    reverseDrive:config.reverseDrive,
+    configVersion:7
   };
   saveConfig();
   localStorage.setItem('spaceRoverWizardDone','1');
