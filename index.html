@@ -713,7 +713,10 @@ async function connect() {
   try {
     setStatus('Choose w33 Control Hub…');
     device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
+      filters: [{
+        namePrefix: 'w33',
+        services: [SERVICE_UUID]
+      }],
       optionalServices: [SERVICE_UUID]
     });
 

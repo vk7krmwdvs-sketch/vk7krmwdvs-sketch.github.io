@@ -26,3 +26,12 @@ Upload all five files together:
 - `icon-512.png`
 
 Because a service worker caches the app, after deployment fully close and reopen Bluefy or clear the site's stored data if an older version appears.
+
+
+## v1.2
+
+- Remembers the selected w33 Control Hub after the first successful connection.
+- On later launches, the Connect button first tries to reconnect to the previously permitted rover using `navigator.bluetooth.getDevices()`.
+- Falls back to the filtered Bluetooth picker when automatic reconnect is unavailable or the saved rover is not found.
+- Added **Forget saved rover** in Setup for classrooms or shared devices.
+- Browser support varies; Bluefy may still require the chooser depending on its Web Bluetooth implementation.
