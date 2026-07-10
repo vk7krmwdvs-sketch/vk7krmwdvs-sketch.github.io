@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b1020">
-<title>Space Rover Controller v7</title>
+<title>Space Rover Controller v8</title>
 <style>
 :root {
   color-scheme: dark;
@@ -191,14 +191,16 @@ button:disabled { opacity:.45; }
 }
 .sound-grid {
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
 }
 .sound-grid button {
   background:var(--panel);
   border:1px solid #ffffff18;
-  font-size:13px;
-  padding:10px 8px;
+  font-size:12px;
+  padding:10px 6px;
+  min-height:44px;
+  line-height:1.15;
 }
 .notice {
   margin:7px 2px 0;
@@ -596,12 +598,39 @@ const SERVICE_UUID = 'f8e49400-16f2-457e-8426-0fbce4eac6dc';
 const WRITE_UUID   = 'f8e49401-16f2-457e-8426-0fbce4eac6dc';
 
 const SOUNDS = {
-  Beep:'1E0115A364',
-  Whistle:'1E0114B345',
-  Excited:'1E0112D383',
-  Cheery:'1E0111E3E0',
-  Sad:'1E0110F3C1',
-  Surprise:'1E010C207C'
+  'Beep':'1E0115A364',
+  'Whistle':'1E0114B345',
+  'Excited':'1E0112D383',
+  'Cheery':'1E0111E3E0',
+  'Sad':'1E0110F3C1',
+  'Surprise':'1E010C207C',
+  'Real Whistle':null,
+  'Zoom':null,
+  'Fart':null,
+  'Fart 2':null,
+  'Womp Womp':null,
+  'Rim Shot':null,
+  'Meow':null,
+  'Bark':null,
+  'Backup':null,
+  'R2':null,
+  'Transmit':null,
+  'Short Beep':null
+};
+
+const DISCOVERED_SOUND_IDS = {
+  'Real Whistle':0x0E,
+  'Zoom':0x18,
+  'Fart':0x19,
+  'Fart 2':0x1A,
+  'Womp Womp':0x1B,
+  'Rim Shot':0x1D,
+  'Meow':0x22,
+  'Bark':0x25,
+  'Backup':0x47,
+  'R2':0x50,
+  'Transmit':0x52,
+  'Short Beep':0x55
 };
 
 const DEFAULT_CONFIG = {
@@ -621,6 +650,7 @@ let controlTimer = null;
 let oscillationTimer = null;
 let writing = false;
 let armValue = 128;
+let actualArmValue = armValue;
 
 let desiredLeft = 0;
 let desiredRight = 0;
@@ -681,7 +711,17 @@ for (const [name, hex] of Object.entries(SOUNDS)) {
   const b = document.createElement('button');
   b.textContent = name;
   b.disabled = true;
-  b.onclick = () => writeHex(hex).catch(showError);
+  b.onclick = async () => {
+    try {
+      if (hex) {
+        await writeHex(hex);
+      } else {
+        await writeBytes(makeSoundCommand(DISCOVERED_SOUND_IDS[name]));
+      }
+    } catch (e) {
+      showError(e);
+    }
+  };
   soundsEl.appendChild(b);
 }
 
@@ -962,7 +1002,7 @@ async function connect() {
 connectBtn.addEventListener('click', async () => {
   if (device?.gatt?.connected) {
     await emergencyStop();
-    stopOscillation();
+    stopOscillation(true);
     stopWizardTest();
     device.gatt.disconnect();
   } else {
@@ -971,7 +1011,7 @@ connectBtn.addEventListener('click', async () => {
 });
 
 stopBtn.addEventListener('click', async () => {
-  stopOscillation();
+  stopOscillation(true);
   stopWizardTest();
   await emergencyStop();
 });
@@ -987,7 +1027,8 @@ function setArmFromPointer(event) {
   let pct = 1 - ((event.clientY - rect.top) / rect.height);
   pct = Math.max(0, Math.min(1, pct));
   armValue = Math.round(pct * 255);
-  desiredArm = armValue;
+  actualArmValue = armValue;
+  desiredArm = actualArmValue;
   forceArmSend = true;
   renderArm();
 }
@@ -997,7 +1038,7 @@ armTrack.addEventListener('pointerdown', event => {
   armDragging = true;
   document.body.classList.add('control-lock');
   armTrack.setPointerCapture(event.pointerId);
-  stopOscillation();
+  stopOscillation(true);
   setArmFromPointer(event);
 });
 armTrack.addEventListener('pointermove', event => {
@@ -1013,7 +1054,7 @@ armTrack.addEventListener('lostpointercapture', releaseArm);
 
 function startOscillation() {
   if (oscillationTimer) {
-    stopOscillation();
+    stopOscillation(true);
     return;
   }
 
@@ -1021,8 +1062,12 @@ function startOscillation() {
   oscillateBtn.classList.add('active');
   oscillateBtn.textContent = 'Stop';
 
+  // Keep the on-screen slider stationary while the robot arm sweeps.
+  actualArmValue = armValue;
+
   oscillationTimer = setInterval(() => {
-    let next = armValue + direction * 10;
+    let next = actualArmValue + direction * 10;
+
     if (next >= 245) {
       next = 245;
       direction = -1;
@@ -1030,18 +1075,23 @@ function startOscillation() {
       next = 10;
       direction = 1;
     }
-    armValue = next;
-    desiredArm = next;
+
+    actualArmValue = next;
+    desiredArm = actualArmValue;
     forceArmSend = true;
-    renderArm();
   }, 90);
 }
 
-function stopOscillation() {
+function stopOscillation(syncVisual = false) {
   if (oscillationTimer) clearInterval(oscillationTimer);
   oscillationTimer = null;
   oscillateBtn.classList.remove('active');
   oscillateBtn.textContent = 'Auto';
+
+  if (syncVisual) {
+    armValue = actualArmValue;
+    renderArm();
+  }
 }
 
 oscillateBtn.addEventListener('click', startOscillation);
@@ -1141,7 +1191,7 @@ saveSetupBtn.addEventListener('click', async () => {
   }
 
   await emergencyStop();
-  stopOscillation();
+  stopOscillation(true);
   config = {
     ...config,
     ...next,
@@ -1318,7 +1368,7 @@ wizardModal.addEventListener('click', async event => {
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && characteristic) {
-    stopOscillation();
+    stopOscillation(true);
     stopWizardTest();
     emergencyStop();
   }
