@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b1020">
-<title>Space Rover Controller v3</title>
+<title>Space Rover Controller v4</title>
 <style>
 :root { color-scheme: dark; --bg:#0b1020; --panel:#151d34; --text:#f5f7ff; --muted:#aab3cc; --accent:#5d8cff; --danger:#ff4d5d; }
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -36,7 +36,7 @@ code { color:#c9d5ff; }
 <body>
 <main>
 <header>
-  <h1>Space Rover v3</h1>
+  <h1>Space Rover v4</h1>
   <button id="connect">Connect</button>
 </header>
 <div class="status"><span id="dot" class="dot"></span><span id="status">Not connected</span></div>
@@ -58,8 +58,8 @@ code { color:#c9d5ff; }
 </section>
 
 <p class="notice">
-Select <b>w33 Control Hub</b> in Bluefy. Disconnect LightBlue first. Test with wheels raised.
-This version generates valid commands for all three output channels using the CRC pattern recovered from the confirmed packets.
+This version uses a fixed-rate control loop with no command backlog. Releasing the joystick or pressing STOP sets both motors to neutral immediately.
+Test with the wheels raised first.
 </p>
 </main>
 
@@ -76,8 +76,14 @@ const SOUNDS = {
 
 let device = null;
 let characteristic = null;
-let lastWriteAt = 0;
-let writeQueue = Promise.resolve();
+let controlTimer = null;
+let writing = false;
+
+let desiredLeft = 0;
+let desiredRight = 0;
+let desiredArm = 128;
+let lastSentArm = null;
+let forceArmSend = true;
 
 const connectBtn = document.querySelector('#connect');
 const stopBtn = document.querySelector('#stop');
@@ -95,7 +101,7 @@ for (const [name, hex] of Object.entries(SOUNDS)) {
   b.textContent = name;
   b.className = 'secondary';
   b.disabled = true;
-  b.onclick = () => enqueueHex(hex);
+  b.onclick = () => writeHex(hex).catch(showError);
   soundsEl.appendChild(b);
 }
 
@@ -139,20 +145,11 @@ async function writeBytes(bytes) {
   }
 }
 
-function enqueueBytes(bytes) {
-  writeQueue = writeQueue.then(async () => {
-    const wait = Math.max(0, 45 - (performance.now() - lastWriteAt));
-    if (wait) await new Promise(r => setTimeout(r, wait));
-    await writeBytes(bytes);
-    lastWriteAt = performance.now();
-  }).catch(showError);
-  return writeQueue;
+async function writeHex(hex) {
+  await writeBytes(hexToBytes(hex));
 }
 
-function enqueueHex(hex) { return enqueueBytes(hexToBytes(hex)); }
-
 function speedToValue(speed, invert=false) {
-  // Neutral confirmed around 0x89. Map -1..1 around that point.
   let s = Math.max(-1, Math.min(1, speed));
   if (invert) s = -s;
   const neutral = 0x89;
@@ -161,13 +158,58 @@ function speedToValue(speed, invert=false) {
     : Math.round(neutral + s * (neutral - 0x07));
 }
 
-async function setDrive(left, right) {
-  enqueueBytes(makeOutputCommand(0, speedToValue(left, invertLeft.checked)));
-  enqueueBytes(makeOutputCommand(2, speedToValue(right, invertRight.checked)));
+async function sendControlFrame() {
+  if (!characteristic || writing) return;
+  writing = true;
+  try {
+    const left = speedToValue(desiredLeft, invertLeft.checked);
+    const right = speedToValue(desiredRight, invertRight.checked);
+
+    await writeBytes(makeOutputCommand(0, left));
+    await new Promise(r => setTimeout(r, 35));
+    await writeBytes(makeOutputCommand(2, right));
+
+    if (forceArmSend || desiredArm !== lastSentArm) {
+      await new Promise(r => setTimeout(r, 35));
+      await writeBytes(makeOutputCommand(1, desiredArm));
+      lastSentArm = desiredArm;
+      forceArmSend = false;
+    }
+  } catch (e) {
+    showError(e);
+  } finally {
+    writing = false;
+  }
 }
 
-function stopRover() {
-  setDrive(0, 0);
+function startControlLoop() {
+  stopControlLoop();
+  controlTimer = setInterval(sendControlFrame, 140);
+}
+
+function stopControlLoop() {
+  if (controlTimer) clearInterval(controlTimer);
+  controlTimer = null;
+}
+
+async function emergencyStop() {
+  desiredLeft = 0;
+  desiredRight = 0;
+  knob.style.transform = 'translate(0,0)';
+
+  // Wait only for the currently active write to finish; there is no backlog.
+  while (writing) await new Promise(r => setTimeout(r, 10));
+
+  try {
+    writing = true;
+    await writeBytes(makeOutputCommand(0, 0x89));
+    await new Promise(r => setTimeout(r, 40));
+    await writeBytes(makeOutputCommand(2, 0x89));
+  } catch (e) {
+    showError(e);
+  } finally {
+    writing = false;
+  }
 }
 
 function showError(e) {
@@ -185,14 +227,22 @@ async function connect() {
     });
     device.addEventListener('gattserverdisconnected', () => {
       characteristic = null;
+      stopControlLoop();
       setStatus('Disconnected');
     });
     setStatus('Connecting…');
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(SERVICE_UUID);
     characteristic = await service.getCharacteristic(WRITE_UUID);
+
+    desiredLeft = 0;
+    desiredRight = 0;
+    desiredArm = Number(arm.value);
+    forceArmSend = true;
+
     setStatus('Connected', true);
-    stopRover();
+    await emergencyStop();
+    startControlLoop();
   } catch (e) {
     if (e.name === 'NotFoundError') setStatus('No device selected');
     else showError(e);
@@ -200,12 +250,20 @@ async function connect() {
 }
 
 connectBtn.addEventListener('click', async () => {
-  if (device?.gatt?.connected) device.gatt.disconnect();
-  else await connect();
+  if (device?.gatt?.connected) {
+    await emergencyStop();
+    device.gatt.disconnect();
+  } else {
+    await connect();
+  }
 });
-stopBtn.addEventListener('click', stopRover);
 
-arm.addEventListener('input', () => enqueueBytes(makeOutputCommand(1, Number(arm.value))));
+stopBtn.addEventListener('click', emergencyStop);
+
+arm.addEventListener('input', () => {
+  desiredArm = Number(arm.value);
+  forceArmSend = true;
+});
 
 function positionFromPointer(event) {
   const r = joystick.getBoundingClientRect();
@@ -218,29 +276,49 @@ function positionFromPointer(event) {
 
   const x = dx / travel;
   const y = -dy / travel;
+
+  // Dead zone around center.
+  if (Math.hypot(x, y) < 0.10) {
+    desiredLeft = 0;
+    desiredRight = 0;
+    return;
+  }
+
   let left = y + x;
   let right = y - x;
   const scale = Math.max(1, Math.abs(left), Math.abs(right));
-  left /= scale; right /= scale;
-  setDrive(left, right);
+  desiredLeft = left / scale;
+  desiredRight = right / scale;
 }
 
 let dragging = false;
 joystick.addEventListener('pointerdown', e => {
-  dragging = true; joystick.setPointerCapture(e.pointerId); positionFromPointer(e);
+  dragging = true;
+  joystick.setPointerCapture(e.pointerId);
+  positionFromPointer(e);
 });
-joystick.addEventListener('pointermove', e => { if (dragging) positionFromPointer(e); });
+joystick.addEventListener('pointermove', e => {
+  if (dragging) positionFromPointer(e);
+});
 function releasePointer() {
   if (!dragging) return;
   dragging = false;
+  desiredLeft = 0;
+  desiredRight = 0;
   knob.style.transform = 'translate(0,0)';
-  stopRover();
+  emergencyStop();
 }
 joystick.addEventListener('pointerup', releasePointer);
 joystick.addEventListener('pointercancel', releasePointer);
 joystick.addEventListener('lostpointercapture', releasePointer);
-document.addEventListener('visibilitychange', () => { if (document.hidden) stopRover(); });
-window.addEventListener('pagehide', stopRover);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && characteristic) emergencyStop();
+});
+window.addEventListener('pagehide', () => {
+  desiredLeft = 0;
+  desiredRight = 0;
+});
 
 setStatus(navigator.bluetooth ? 'Ready to connect' : 'Web Bluetooth unavailable in this browser');
 </script>
