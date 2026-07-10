@@ -4,64 +4,341 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b1020">
-<title>Space Rover Controller v4</title>
+<title>Space Rover Controller v5</title>
 <style>
-:root { color-scheme: dark; --bg:#0b1020; --panel:#151d34; --text:#f5f7ff; --muted:#aab3cc; --accent:#5d8cff; --danger:#ff4d5d; }
+:root {
+  color-scheme: dark;
+  --bg:#0b1020;
+  --panel:#151d34;
+  --text:#f5f7ff;
+  --muted:#aab3cc;
+  --accent:#5d8cff;
+  --danger:#ff4d5d;
+  --good:#40d17a;
+}
 * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body { margin:0; min-height:100vh; background:radial-gradient(circle at top,#172343,var(--bg) 45%); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-main { width:min(760px,100%); margin:auto; padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 24px); }
-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
-h1 { font-size:24px; margin:0; flex:1; }
-.status { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:14px; margin-bottom:16px; }
-.dot { width:11px; height:11px; border-radius:50%; background:#7a849f; box-shadow:0 0 0 4px #7a849f22; }
-.dot.connected { background:#40d17a; box-shadow:0 0 0 4px #40d17a22; }
-button { border:0; color:white; font-weight:700; border-radius:14px; padding:13px 16px; background:var(--accent); font-size:16px; }
-button.secondary { background:var(--panel); border:1px solid #ffffff18; }
-button.danger { width:100%; background:var(--danger); font-size:20px; padding:17px; margin:18px 0; }
+html, body { overscroll-behavior:none; }
+body {
+  margin:0;
+  min-height:100vh;
+  background:radial-gradient(circle at top,#172343,var(--bg) 45%);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+main {
+  width:min(860px,100%);
+  margin:auto;
+  padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 18px);
+}
+header {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+}
+h1 { font-size:22px; margin:0; flex:1; }
+.status {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--muted);
+  font-size:13px;
+  margin-bottom:10px;
+}
+.dot {
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#7a849f;
+  box-shadow:0 0 0 4px #7a849f22;
+}
+.dot.connected {
+  background:var(--good);
+  box-shadow:0 0 0 4px #40d17a22;
+}
+button {
+  border:0;
+  color:white;
+  font-weight:700;
+  border-radius:13px;
+  padding:11px 14px;
+  background:var(--accent);
+  font-size:15px;
+}
+button.secondary {
+  background:var(--panel);
+  border:1px solid #ffffff18;
+}
+button.danger {
+  width:100%;
+  background:var(--danger);
+  font-size:18px;
+  padding:14px;
+}
 button:disabled { opacity:.45; }
-.card { background:#11192dcb; backdrop-filter:blur(18px); border:1px solid #ffffff14; border-radius:22px; padding:18px; box-shadow:0 20px 60px #0005; margin-bottom:14px; }
-.joy-wrap { display:grid; place-items:center; padding:10px 0; touch-action:none; }
-#joystick { position:relative; width:min(76vw,360px); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 40% 35%,#27375f,#121a30 65%); border:2px solid #ffffff1c; box-shadow:inset 0 0 30px #0008,0 20px 50px #0005; }
-#knob { position:absolute; width:36%; aspect-ratio:1; left:32%; top:32%; border-radius:50%; background:linear-gradient(145deg,#82a5ff,#3c6ef0); box-shadow:0 14px 30px #0008,inset 0 1px 0 #fff8; transform:translate(0,0); }
-.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.grid button { background:var(--panel); border:1px solid #ffffff18; font-size:14px; }
-.row { display:flex; gap:12px; align-items:center; margin:12px 0; }
-.row label { min-width:92px; color:var(--muted); font-size:14px; }
-input[type=range] { width:100%; }
-.toggle { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted); }
-.notice { margin-top:12px; color:var(--muted); font-size:13px; line-height:1.45; }
-code { color:#c9d5ff; }
+.card {
+  background:#11192dcb;
+  backdrop-filter:blur(18px);
+  border:1px solid #ffffff14;
+  border-radius:20px;
+  padding:14px;
+  box-shadow:0 16px 45px #0005;
+  margin-bottom:12px;
+}
+.control-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 92px;
+  gap:12px;
+  align-items:center;
+}
+.joy-wrap {
+  display:grid;
+  place-items:center;
+  touch-action:none;
+  min-width:0;
+}
+#joystick {
+  position:relative;
+  width:min(66vw,350px);
+  max-width:100%;
+  aspect-ratio:1;
+  border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#27375f,#121a30 65%);
+  border:2px solid #ffffff1c;
+  box-shadow:inset 0 0 30px #0008,0 18px 42px #0005;
+  touch-action:none;
+}
+#knob {
+  position:absolute;
+  width:36%;
+  aspect-ratio:1;
+  left:32%;
+  top:32%;
+  border-radius:50%;
+  background:linear-gradient(145deg,#82a5ff,#3c6ef0);
+  box-shadow:0 14px 30px #0008,inset 0 1px 0 #fff8;
+  transform:translate(0,0);
+}
+.arm-panel {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:290px;
+}
+.arm-title {
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+.vertical-slider-wrap {
+  width:56px;
+  height:210px;
+  display:grid;
+  place-items:center;
+  touch-action:none;
+  overflow:visible;
+}
+#arm {
+  width:210px;
+  transform:rotate(-90deg);
+  touch-action:none;
+}
+#oscillate.active {
+  background:var(--good);
+  color:#07140d;
+}
+.bottom-grid {
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+  margin-top:12px;
+}
+.toggles {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  color:var(--muted);
+  font-size:13px;
+}
+.toggle {
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.sound-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.sound-grid button {
+  background:var(--panel);
+  border:1px solid #ffffff18;
+  font-size:13px;
+  padding:10px 8px;
+}
+.notice {
+  margin:8px 2px 0;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+.modal-backdrop {
+  position:fixed;
+  inset:0;
+  background:#0009;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:50;
+}
+.modal-backdrop.open { display:flex; }
+.modal {
+  width:min(520px,100%);
+  max-height:88vh;
+  overflow:auto;
+  background:#11192d;
+  border:1px solid #ffffff1c;
+  border-radius:20px;
+  padding:18px;
+  box-shadow:0 24px 80px #000b;
+}
+.modal h2 { margin:0 0 6px; font-size:21px; }
+.modal p { color:var(--muted); font-size:13px; line-height:1.4; }
+.setting-row {
+  display:grid;
+  grid-template-columns:1fr 150px;
+  gap:12px;
+  align-items:center;
+  margin:14px 0;
+}
+select {
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #ffffff20;
+  background:#18223c;
+  color:var(--text);
+  font-size:15px;
+}
+.modal-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:18px;
+}
+.warning {
+  display:none;
+  color:#ffcc66;
+  font-size:13px;
+  margin-top:8px;
+}
+.warning.show { display:block; }
+
+@media (max-width:520px) {
+  main { padding-left:10px; padding-right:10px; }
+  .card { padding:10px; }
+  .control-row { grid-template-columns:minmax(0,1fr) 78px; gap:6px; }
+  #joystick { width:min(69vw,330px); }
+  .arm-panel { min-height:250px; }
+  .vertical-slider-wrap { height:180px; }
+  #arm { width:180px; }
+  .sound-grid { grid-template-columns:repeat(3,1fr); }
+  header button { padding:10px 11px; font-size:14px; }
+}
 </style>
 </head>
 <body>
 <main>
 <header>
-  <h1>Space Rover v4</h1>
+  <h1>Space Rover</h1>
+  <button id="settingsBtn" class="secondary">Setup</button>
   <button id="connect">Connect</button>
 </header>
-<div class="status"><span id="dot" class="dot"></span><span id="status">Not connected</span></div>
+
+<div class="status">
+  <span id="dot" class="dot"></span>
+  <span id="status">Not connected</span>
+</div>
 
 <section class="card">
-  <div class="joy-wrap">
-    <div id="joystick" aria-label="Differential drive joystick"><div id="knob"></div></div>
+  <div class="control-row">
+    <div class="joy-wrap">
+      <div id="joystick" aria-label="Differential drive joystick">
+        <div id="knob"></div>
+      </div>
+    </div>
+
+    <div class="arm-panel">
+      <div class="arm-title">ARM</div>
+      <div class="vertical-slider-wrap">
+        <input id="arm" type="range" min="0" max="255" value="128" aria-label="Swing arm position">
+      </div>
+      <button id="oscillate" class="secondary">Auto</button>
+    </div>
   </div>
-  <div class="row">
-    <label class="toggle"><input id="invertLeft" type="checkbox"> Invert left</label>
-    <label class="toggle"><input id="invertRight" type="checkbox" checked> Invert right</label>
+
+  <div class="bottom-grid">
+    <div class="toggles">
+      <label class="toggle"><input id="invertLeft" type="checkbox"> Left invert</label>
+      <label class="toggle"><input id="invertRight" type="checkbox" checked> Right invert</label>
+    </div>
+    <button id="stop" class="danger" disabled>■ STOP</button>
   </div>
-  <button id="stop" class="danger" disabled>■ STOP</button>
 </section>
 
 <section class="card">
-  <div class="row"><label>Swing arm</label><input id="arm" type="range" min="0" max="255" value="128"></div>
-  <div class="grid" id="sounds"></div>
+  <div class="sound-grid" id="sounds"></div>
 </section>
 
 <p class="notice">
-This version uses a fixed-rate control loop with no command backlog. Releasing the joystick or pressing STOP sets both motors to neutral immediately.
-Test with the wheels raised first.
+Open in Bluefy, select <b>w33 Control Hub</b>, and disconnect LightBlue first. Setup choices and inversion are saved on this device.
 </p>
 </main>
+
+<div id="settingsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal">
+    <h2 id="settingsTitle">Hub setup</h2>
+    <p>Assign each robot part to the physical output number printed on the w33 hub.</p>
+
+    <div class="setting-row">
+      <label for="leftPort">Left motor</label>
+      <select id="leftPort">
+        <option value="0">Output 1</option>
+        <option value="1">Output 2</option>
+        <option value="2">Output 3</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label for="armPort">Swing arm</label>
+      <select id="armPort">
+        <option value="0">Output 1</option>
+        <option value="1">Output 2</option>
+        <option value="2">Output 3</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label for="rightPort">Right motor</label>
+      <select id="rightPort">
+        <option value="0">Output 1</option>
+        <option value="1">Output 2</option>
+        <option value="2">Output 3</option>
+      </select>
+    </div>
+
+    <div id="portWarning" class="warning">Each part must use a different output.</div>
+
+    <div class="modal-actions">
+      <button id="cancelSettings" class="secondary">Cancel</button>
+      <button id="saveSettings">Save</button>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -70,13 +347,27 @@ const SERVICE_UUID = 'f8e49400-16f2-457e-8426-0fbce4eac6dc';
 const WRITE_UUID   = 'f8e49401-16f2-457e-8426-0fbce4eac6dc';
 
 const SOUNDS = {
-  Beep:'1E0115A364', Whistle:'1E0114B345', Excited:'1E0112D383',
-  Cheery:'1E0111E3E0', Sad:'1E0110F3C1', Surprise:'1E010C207C'
+  Beep:'1E0115A364',
+  Whistle:'1E0114B345',
+  Excited:'1E0112D383',
+  Cheery:'1E0111E3E0',
+  Sad:'1E0110F3C1',
+  Surprise:'1E010C207C'
 };
 
+const DEFAULT_CONFIG = {
+  leftPort: 0,
+  armPort: 1,
+  rightPort: 2,
+  invertLeft: false,
+  invertRight: true
+};
+
+let config = loadConfig();
 let device = null;
 let characteristic = null;
 let controlTimer = null;
+let oscillationTimer = null;
 let writing = false;
 
 let desiredLeft = 0;
@@ -86,23 +377,51 @@ let lastSentArm = null;
 let forceArmSend = true;
 
 const connectBtn = document.querySelector('#connect');
+const settingsBtn = document.querySelector('#settingsBtn');
 const stopBtn = document.querySelector('#stop');
 const statusEl = document.querySelector('#status');
 const dotEl = document.querySelector('#dot');
 const joystick = document.querySelector('#joystick');
 const knob = document.querySelector('#knob');
 const arm = document.querySelector('#arm');
+const oscillateBtn = document.querySelector('#oscillate');
 const soundsEl = document.querySelector('#sounds');
 const invertLeft = document.querySelector('#invertLeft');
 const invertRight = document.querySelector('#invertRight');
 
+const settingsModal = document.querySelector('#settingsModal');
+const leftPort = document.querySelector('#leftPort');
+const armPort = document.querySelector('#armPort');
+const rightPort = document.querySelector('#rightPort');
+const portWarning = document.querySelector('#portWarning');
+const saveSettingsBtn = document.querySelector('#saveSettings');
+const cancelSettingsBtn = document.querySelector('#cancelSettings');
+
+applyConfigToUI();
+
 for (const [name, hex] of Object.entries(SOUNDS)) {
   const b = document.createElement('button');
   b.textContent = name;
-  b.className = 'secondary';
   b.disabled = true;
   b.onclick = () => writeHex(hex).catch(showError);
   soundsEl.appendChild(b);
+}
+
+function loadConfig() {
+  try {
+    return { ...DEFAULT_CONFIG, ...JSON.parse(localStorage.getItem('spaceRoverConfig') || '{}') };
+  } catch {
+    return { ...DEFAULT_CONFIG };
+  }
+}
+
+function saveConfig() {
+  localStorage.setItem('spaceRoverConfig', JSON.stringify(config));
+}
+
+function applyConfigToUI() {
+  invertLeft.checked = !!config.invertLeft;
+  invertRight.checked = !!config.invertRight;
 }
 
 function setStatus(text, connected=false) {
@@ -115,7 +434,9 @@ function setStatus(text, connected=false) {
 
 function hexToBytes(hex) {
   const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.slice(i*2, i*2+2), 16);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.slice(i*2, i*2+2), 16);
+  }
   return bytes;
 }
 
@@ -124,7 +445,9 @@ function crc16Xmodem(bytes) {
   for (const b of bytes) {
     crc ^= (b << 8);
     for (let i = 0; i < 8; i++) {
-      crc = (crc & 0x8000) ? (((crc << 1) ^ 0x1021) & 0xFFFF) : ((crc << 1) & 0xFFFF);
+      crc = (crc & 0x8000)
+        ? (((crc << 1) ^ 0x1021) & 0xFFFF)
+        : ((crc << 1) & 0xFFFF);
     }
   }
   return crc;
@@ -133,7 +456,11 @@ function crc16Xmodem(bytes) {
 function makeOutputCommand(channel, value) {
   const body = new Uint8Array([0x14, 0x02, channel & 0xFF, value & 0xFF]);
   const checksum = crc16Xmodem(body) ^ 0xA239;
-  return new Uint8Array([...body, (checksum >> 8) & 0xFF, checksum & 0xFF]);
+  return new Uint8Array([
+    ...body,
+    (checksum >> 8) & 0xFF,
+    checksum & 0xFF
+  ]);
 }
 
 async function writeBytes(bytes) {
@@ -160,18 +487,19 @@ function speedToValue(speed, invert=false) {
 
 async function sendControlFrame() {
   if (!characteristic || writing) return;
+
   writing = true;
   try {
-    const left = speedToValue(desiredLeft, invertLeft.checked);
-    const right = speedToValue(desiredRight, invertRight.checked);
+    const leftValue = speedToValue(desiredLeft, invertLeft.checked);
+    const rightValue = speedToValue(desiredRight, invertRight.checked);
 
-    await writeBytes(makeOutputCommand(0, left));
-    await new Promise(r => setTimeout(r, 35));
-    await writeBytes(makeOutputCommand(2, right));
+    await writeBytes(makeOutputCommand(config.leftPort, leftValue));
+    await delay(35);
+    await writeBytes(makeOutputCommand(config.rightPort, rightValue));
 
     if (forceArmSend || desiredArm !== lastSentArm) {
-      await new Promise(r => setTimeout(r, 35));
-      await writeBytes(makeOutputCommand(1, desiredArm));
+      await delay(35);
+      await writeBytes(makeOutputCommand(config.armPort, desiredArm));
       lastSentArm = desiredArm;
       forceArmSend = false;
     }
@@ -180,6 +508,10 @@ async function sendControlFrame() {
   } finally {
     writing = false;
   }
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function startControlLoop() {
@@ -197,14 +529,15 @@ async function emergencyStop() {
   desiredRight = 0;
   knob.style.transform = 'translate(0,0)';
 
-  // Wait only for the currently active write to finish; there is no backlog.
-  while (writing) await new Promise(r => setTimeout(r, 10));
+  while (writing) await delay(10);
+
+  if (!characteristic) return;
 
   try {
     writing = true;
-    await writeBytes(makeOutputCommand(0, 0x89));
-    await new Promise(r => setTimeout(r, 40));
-    await writeBytes(makeOutputCommand(2, 0x89));
+    await writeBytes(makeOutputCommand(config.leftPort, 0x89));
+    await delay(40);
+    await writeBytes(makeOutputCommand(config.rightPort, 0x89));
   } catch (e) {
     showError(e);
   } finally {
@@ -218,18 +551,25 @@ function showError(e) {
 }
 
 async function connect() {
-  if (!navigator.bluetooth) return setStatus('This browser does not support Web Bluetooth');
+  if (!navigator.bluetooth) {
+    setStatus('This browser does not support Web Bluetooth');
+    return;
+  }
+
   try {
     setStatus('Choose w33 Control Hub…');
     device = await navigator.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: [SERVICE_UUID]
     });
+
     device.addEventListener('gattserverdisconnected', () => {
       characteristic = null;
       stopControlLoop();
+      stopOscillation();
       setStatus('Disconnected');
     });
+
     setStatus('Connecting…');
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(SERVICE_UUID);
@@ -244,40 +584,92 @@ async function connect() {
     await emergencyStop();
     startControlLoop();
   } catch (e) {
-    if (e.name === 'NotFoundError') setStatus('No device selected');
-    else showError(e);
+    if (e.name === 'NotFoundError') {
+      setStatus('No device selected');
+    } else {
+      showError(e);
+    }
   }
 }
 
 connectBtn.addEventListener('click', async () => {
   if (device?.gatt?.connected) {
     await emergencyStop();
+    stopOscillation();
     device.gatt.disconnect();
   } else {
     await connect();
   }
 });
 
-stopBtn.addEventListener('click', emergencyStop);
+stopBtn.addEventListener('click', async () => {
+  stopOscillation();
+  await emergencyStop();
+});
 
 arm.addEventListener('input', () => {
+  stopOscillation();
   desiredArm = Number(arm.value);
   forceArmSend = true;
 });
 
+function startOscillation() {
+  if (oscillationTimer) {
+    stopOscillation();
+    return;
+  }
+
+  let direction = 1;
+  oscillateBtn.classList.add('active');
+  oscillateBtn.textContent = 'Stop';
+
+  oscillationTimer = setInterval(() => {
+    let next = Number(arm.value) + direction * 10;
+
+    if (next >= 245) {
+      next = 245;
+      direction = -1;
+    } else if (next <= 10) {
+      next = 10;
+      direction = 1;
+    }
+
+    arm.value = String(next);
+    desiredArm = next;
+    forceArmSend = true;
+  }, 90);
+}
+
+function stopOscillation() {
+  if (oscillationTimer) clearInterval(oscillationTimer);
+  oscillationTimer = null;
+  oscillateBtn.classList.remove('active');
+  oscillateBtn.textContent = 'Auto';
+}
+
+oscillateBtn.addEventListener('click', startOscillation);
+
 function positionFromPointer(event) {
   const r = joystick.getBoundingClientRect();
-  const cx = r.left + r.width/2, cy = r.top + r.height/2;
-  let dx = event.clientX - cx, dy = event.clientY - cy;
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+
+  let dx = event.clientX - cx;
+  let dy = event.clientY - cy;
+
   const travel = r.width * 0.32;
-  const len = Math.hypot(dx,dy);
-  if (len > travel) { dx *= travel/len; dy *= travel/len; }
+  const len = Math.hypot(dx, dy);
+
+  if (len > travel) {
+    dx *= travel / len;
+    dy *= travel / len;
+  }
+
   knob.style.transform = `translate(${dx}px,${dy}px)`;
 
   const x = dx / travel;
   const y = -dy / travel;
 
-  // Dead zone around center.
   if (Math.hypot(x, y) < 0.10) {
     desiredLeft = 0;
     desiredRight = 0;
@@ -287,19 +679,23 @@ function positionFromPointer(event) {
   let left = y + x;
   let right = y - x;
   const scale = Math.max(1, Math.abs(left), Math.abs(right));
+
   desiredLeft = left / scale;
   desiredRight = right / scale;
 }
 
 let dragging = false;
-joystick.addEventListener('pointerdown', e => {
+
+joystick.addEventListener('pointerdown', event => {
   dragging = true;
-  joystick.setPointerCapture(e.pointerId);
-  positionFromPointer(e);
+  joystick.setPointerCapture(event.pointerId);
+  positionFromPointer(event);
 });
-joystick.addEventListener('pointermove', e => {
-  if (dragging) positionFromPointer(e);
+
+joystick.addEventListener('pointermove', event => {
+  if (dragging) positionFromPointer(event);
 });
+
 function releasePointer() {
   if (!dragging) return;
   dragging = false;
@@ -308,16 +704,79 @@ function releasePointer() {
   knob.style.transform = 'translate(0,0)';
   emergencyStop();
 }
+
 joystick.addEventListener('pointerup', releasePointer);
 joystick.addEventListener('pointercancel', releasePointer);
 joystick.addEventListener('lostpointercapture', releasePointer);
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && characteristic) emergencyStop();
+invertLeft.addEventListener('change', () => {
+  config.invertLeft = invertLeft.checked;
+  saveConfig();
 });
+
+invertRight.addEventListener('change', () => {
+  config.invertRight = invertRight.checked;
+  saveConfig();
+});
+
+settingsBtn.addEventListener('click', () => {
+  leftPort.value = String(config.leftPort);
+  armPort.value = String(config.armPort);
+  rightPort.value = String(config.rightPort);
+  portWarning.classList.remove('show');
+  settingsModal.classList.add('open');
+});
+
+cancelSettingsBtn.addEventListener('click', () => {
+  settingsModal.classList.remove('open');
+});
+
+settingsModal.addEventListener('click', event => {
+  if (event.target === settingsModal) {
+    settingsModal.classList.remove('open');
+  }
+});
+
+saveSettingsBtn.addEventListener('click', async () => {
+  const next = {
+    leftPort: Number(leftPort.value),
+    armPort: Number(armPort.value),
+    rightPort: Number(rightPort.value)
+  };
+
+  const unique = new Set([next.leftPort, next.armPort, next.rightPort]);
+  if (unique.size !== 3) {
+    portWarning.classList.add('show');
+    return;
+  }
+
+  await emergencyStop();
+  stopOscillation();
+
+  config = {
+    ...config,
+    ...next,
+    invertLeft: invertLeft.checked,
+    invertRight: invertRight.checked
+  };
+
+  saveConfig();
+  forceArmSend = true;
+  settingsModal.classList.remove('open');
+  setStatus(device?.gatt?.connected ? 'Connected — setup saved' : 'Setup saved', !!device?.gatt?.connected);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && characteristic) {
+    stopOscillation();
+    emergencyStop();
+  }
+});
+
 window.addEventListener('pagehide', () => {
   desiredLeft = 0;
   desiredRight = 0;
+  stopOscillation();
 });
 
 setStatus(navigator.bluetooth ? 'Ready to connect' : 'Web Bluetooth unavailable in this browser');
