@@ -50,15 +50,21 @@ code { color:#c9d5ff; }
 </section>
 
 <p class="notice">
-Use this page in a Web Bluetooth-capable browser. On iPhone, Safari does not expose Web Bluetooth; open the hosted page in Bluefy or another Web BLE browser. The rover should be switched on and disconnected from other devices.
+Use this page in a Web Bluetooth-capable browser. On iPhone, Safari does not expose Web Bluetooth; open the hosted page in Bluefy or another Web BLE browser. The rover should be switched on and disconnected from LightBlue or any other app. In the device picker, choose “w33 Control Hub.”
 </p>
+
+<p class="notice">
+Confirmed hardware mapping: service <code>F8E49400…</code>, Bitsnap Control characteristic
+<code>F8E49401…</code>, and motor neutral command <code>140202897BCC</code>.
+</p>
+
 </main>
 
 <script>
 'use strict';
 
-const SERVICE_UUID = 'd9d9e9e0-aa4e-4797-8151-cb41cedaf2ad';
-const WRITE_UUID   = 'd9d9e9e1-aa4e-4797-8151-cb41cedaf2ad';
+const SERVICE_UUID = 'f8e49400-16f2-457e-8426-0fbce4eac6dc';
+const WRITE_UUID   = 'f8e49401-16f2-457e-8426-0fbce4eac6dc';
 const DRIVE = ["140202FF659D", "140202FA3538", "140202F6F4B4", "140202F2B430", "140202ED57EE", "140202EA2709", "140202E6E685", "140202E3B620", "140202DF41FF", "140202DA115A", "140202D6D0D6", "140202D29052", "140202CE43EF", "140202CA036B", "140202C5F284", "140202C28263", "140202BE3D78", "140202BA7DFC", "140202B6BC70", "140202B2FCF4", "140202AB7FEC", "140202AA6FCD", "140202A6AE41", "140202A2EEC5", "140202A1DEA6", "1402029E191A", "1402029969FD", "140202969812", "14020292D896", "1402028D3B48", "1402028A4BAF", "140202897BCC", "1402027DD457", "1402027994D3", "14020276653C", "1402027225B8", "1402026EF605", "1402026DC666", "1402026896C3", "1402026327A8", "1402026107EA", "1402025CE014", "14020259B0B1", "14020255713D", "140202502198", "1402024B82C2", "14020249A280", "14020245630C", "140202412388", "1402023BFC55", "14020239DC17", "140202337D5D", "140202304D3E", "1402022BEE64", "14020229CE26", "140202214F2E", "140202205F0F", "1402021BD837", "14020218E854", "1402021429D8", "1402020F8A82", "1402020CBAE1", "140202070B8A"];
 const TURN = ["140201FC00AD", "140201EA725A", "140201E49394", "140201DF14AC", "140201D9746A", "140201D1F562", "140201CC36FE", "140201C697B4", "140201C0F772", "140201B918CC", "140201B4C961", "140201AE7A1A", "140201A7EB33", "140201A2BB96", "1402019C6C0B", "14020196CD41", "14020190AD87", "1402018A1EFC", "14020184FF32", "1402017EB167", "14020178D1A1", "1402017270EB", "1402016C8314", "14020166225E", "140201604298", "1402015AD581", "14020154344F", "1402014F9715", "14020149F7D3", "1402014246B8", "1402013CD9E1", "140201002E3E"];
 const SOUNDS = {"Beep": "1E0115A364", "Whistle": "1E0114B345", "Excited": "1E0112D383", "Cheery": "1E0111E3E0", "Sad": "1E0110F3C1", "Surprise": "1E010C207C"};
@@ -137,7 +143,7 @@ async function connect() {
   try {
     setStatus('Choose the ControlHub…');
     device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [SERVICE_UUID] }],
+      acceptAllDevices: true,
       optionalServices: [SERVICE_UUID]
     });
     device.addEventListener('gattserverdisconnected', () => {
