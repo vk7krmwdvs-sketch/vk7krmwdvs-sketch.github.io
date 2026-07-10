@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#0b1020">
-<title>Space Rover Controller v5</title>
+<title>Space Rover Controller v6</title>
 <style>
 :root {
   color-scheme: dark;
@@ -25,10 +25,11 @@ body {
   color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
+body.control-lock { overflow:hidden; touch-action:none; }
 main {
-  width:min(860px,100%);
+  width:min(900px,100%);
   margin:auto;
-  padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 18px);
+  padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 14px);
 }
 header {
   display:flex;
@@ -70,10 +71,7 @@ button.secondary {
   border:1px solid #ffffff18;
 }
 button.danger {
-  width:100%;
   background:var(--danger);
-  font-size:18px;
-  padding:14px;
 }
 button:disabled { opacity:.45; }
 .card {
@@ -81,15 +79,15 @@ button:disabled { opacity:.45; }
   backdrop-filter:blur(18px);
   border:1px solid #ffffff14;
   border-radius:20px;
-  padding:14px;
+  padding:12px;
   box-shadow:0 16px 45px #0005;
-  margin-bottom:12px;
+  margin-bottom:10px;
 }
-.control-row {
+.control-grid {
   display:grid;
-  grid-template-columns:minmax(0,1fr) 92px;
-  gap:12px;
-  align-items:center;
+  grid-template-columns:minmax(0,1fr) 96px;
+  gap:10px;
+  align-items:stretch;
 }
 .joy-wrap {
   display:grid;
@@ -99,7 +97,7 @@ button:disabled { opacity:.45; }
 }
 #joystick {
   position:relative;
-  width:min(66vw,350px);
+  width:min(72vw,390px);
   max-width:100%;
   aspect-ratio:1;
   border-radius:50%;
@@ -125,36 +123,55 @@ button:disabled { opacity:.45; }
   align-items:center;
   justify-content:center;
   gap:8px;
-  min-height:290px;
+  min-height:280px;
 }
 .arm-title {
   color:var(--muted);
   font-size:13px;
-  font-weight:700;
+  font-weight:800;
+  letter-spacing:.08em;
 }
-.vertical-slider-wrap {
-  width:56px;
+#armTrack {
+  position:relative;
+  width:44px;
   height:210px;
-  display:grid;
-  place-items:center;
+  border-radius:24px;
+  background:linear-gradient(#26365f,#141c33);
+  border:1px solid #ffffff1c;
+  box-shadow:inset 0 0 20px #0008;
   touch-action:none;
-  overflow:visible;
 }
-#arm {
-  width:210px;
-  transform:rotate(-90deg);
-  touch-action:none;
+#armFill {
+  position:absolute;
+  left:6px;
+  right:6px;
+  bottom:6px;
+  height:50%;
+  border-radius:18px;
+  background:linear-gradient(#6f95ff,#456eea);
+  opacity:.42;
+}
+#armThumb {
+  position:absolute;
+  left:50%;
+  width:58px;
+  height:34px;
+  border-radius:17px;
+  background:linear-gradient(145deg,#8fb0ff,#527ef0);
+  box-shadow:0 8px 20px #0009,inset 0 1px 0 #fff8;
+  transform:translate(-50%,50%);
+  bottom:50%;
 }
 #oscillate.active {
   background:var(--good);
   color:#07140d;
 }
-.bottom-grid {
+.controls-bottom {
   display:grid;
   grid-template-columns:1fr auto;
   gap:10px;
   align-items:center;
-  margin-top:12px;
+  margin-top:10px;
 }
 .toggles {
   display:flex;
@@ -168,6 +185,10 @@ button:disabled { opacity:.45; }
   align-items:center;
   gap:6px;
 }
+#stop {
+  min-width:120px;
+  font-size:17px;
+}
 .sound-grid {
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -180,7 +201,7 @@ button:disabled { opacity:.45; }
   padding:10px 8px;
 }
 .notice {
-  margin:8px 2px 0;
+  margin:7px 2px 0;
   color:var(--muted);
   font-size:12px;
   line-height:1.35;
@@ -197,8 +218,8 @@ button:disabled { opacity:.45; }
 }
 .modal-backdrop.open { display:flex; }
 .modal {
-  width:min(520px,100%);
-  max-height:88vh;
+  width:min(560px,100%);
+  max-height:90vh;
   overflow:auto;
   background:#11192d;
   border:1px solid #ffffff1c;
@@ -207,7 +228,8 @@ button:disabled { opacity:.45; }
   box-shadow:0 24px 80px #000b;
 }
 .modal h2 { margin:0 0 6px; font-size:21px; }
-.modal p { color:var(--muted); font-size:13px; line-height:1.4; }
+.modal h3 { margin:18px 0 6px; font-size:17px; }
+.modal p { color:var(--muted); font-size:13px; line-height:1.45; }
 .setting-row {
   display:grid;
   grid-template-columns:1fr 150px;
@@ -238,15 +260,47 @@ select {
 }
 .warning.show { display:block; }
 
+.wizard-step { display:none; }
+.wizard-step.active { display:block; }
+.wizard-test-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin:12px 0;
+}
+.wizard-test-grid button {
+  background:var(--panel);
+  border:1px solid #ffffff18;
+}
+.wizard-choice {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:12px;
+}
+.small-note { color:var(--muted); font-size:12px; }
+.progress {
+  display:flex;
+  gap:6px;
+  margin:10px 0 16px;
+}
+.progress span {
+  flex:1;
+  height:5px;
+  background:#ffffff14;
+  border-radius:999px;
+}
+.progress span.done { background:var(--accent); }
+
 @media (max-width:520px) {
-  main { padding-left:10px; padding-right:10px; }
-  .card { padding:10px; }
-  .control-row { grid-template-columns:minmax(0,1fr) 78px; gap:6px; }
-  #joystick { width:min(69vw,330px); }
+  main { padding-left:8px; padding-right:8px; }
+  .card { padding:9px; }
+  .control-grid { grid-template-columns:minmax(0,1fr) 84px; gap:5px; }
+  #joystick { width:min(74vw,360px); }
   .arm-panel { min-height:250px; }
-  .vertical-slider-wrap { height:180px; }
-  #arm { width:180px; }
-  .sound-grid { grid-template-columns:repeat(3,1fr); }
+  #armTrack { height:185px; width:40px; }
+  #armThumb { width:52px; }
+  #stop { min-width:105px; padding-left:10px; padding-right:10px; }
   header button { padding:10px 11px; font-size:14px; }
 }
 </style>
@@ -255,7 +309,7 @@ select {
 <main>
 <header>
   <h1>Space Rover</h1>
-  <button id="settingsBtn" class="secondary">Setup</button>
+  <button id="setupBtn" class="secondary">Setup</button>
   <button id="connect">Connect</button>
 </header>
 
@@ -265,7 +319,7 @@ select {
 </div>
 
 <section class="card">
-  <div class="control-row">
+  <div class="control-grid">
     <div class="joy-wrap">
       <div id="joystick" aria-label="Differential drive joystick">
         <div id="knob"></div>
@@ -274,14 +328,15 @@ select {
 
     <div class="arm-panel">
       <div class="arm-title">ARM</div>
-      <div class="vertical-slider-wrap">
-        <input id="arm" type="range" min="0" max="255" value="128" aria-label="Swing arm position">
+      <div id="armTrack" aria-label="Swing arm position">
+        <div id="armFill"></div>
+        <div id="armThumb"></div>
       </div>
       <button id="oscillate" class="secondary">Auto</button>
     </div>
   </div>
 
-  <div class="bottom-grid">
+  <div class="controls-bottom">
     <div class="toggles">
       <label class="toggle"><input id="invertLeft" type="checkbox"> Left invert</label>
       <label class="toggle"><input id="invertRight" type="checkbox" checked> Right invert</label>
@@ -295,15 +350,18 @@ select {
 </section>
 
 <p class="notice">
-Open in Bluefy, select <b>w33 Control Hub</b>, and disconnect LightBlue first. Setup choices and inversion are saved on this device.
+Open in Bluefy, select <b>w33 Control Hub</b>, and disconnect LightBlue first. Setup and calibration are saved on this device.
 </p>
 </main>
 
-<div id="settingsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+<div id="setupModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
   <div class="modal">
-    <h2 id="settingsTitle">Hub setup</h2>
-    <p>Assign each robot part to the physical output number printed on the w33 hub.</p>
+    <h2 id="setupTitle">Robot setup</h2>
+    <p>Assign the left motor, swing arm, and right motor to the hub outputs. You can use the calibration wizard or set them manually.</p>
 
+    <button id="startWizard" style="width:100%;margin:8px 0 14px;">Start calibration wizard</button>
+
+    <h3>Manual setup</h3>
     <div class="setting-row">
       <label for="leftPort">Left motor</label>
       <select id="leftPort">
@@ -312,7 +370,6 @@ Open in Bluefy, select <b>w33 Control Hub</b>, and disconnect LightBlue first. S
         <option value="2">Output 3</option>
       </select>
     </div>
-
     <div class="setting-row">
       <label for="armPort">Swing arm</label>
       <select id="armPort">
@@ -321,7 +378,6 @@ Open in Bluefy, select <b>w33 Control Hub</b>, and disconnect LightBlue first. S
         <option value="2">Output 3</option>
       </select>
     </div>
-
     <div class="setting-row">
       <label for="rightPort">Right motor</label>
       <select id="rightPort">
@@ -330,12 +386,71 @@ Open in Bluefy, select <b>w33 Control Hub</b>, and disconnect LightBlue first. S
         <option value="2">Output 3</option>
       </select>
     </div>
-
     <div id="portWarning" class="warning">Each part must use a different output.</div>
 
     <div class="modal-actions">
-      <button id="cancelSettings" class="secondary">Cancel</button>
-      <button id="saveSettings">Save</button>
+      <button id="cancelSetup" class="secondary">Cancel</button>
+      <button id="saveSetup">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="wizardModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
+  <div class="modal">
+    <h2 id="wizardTitle">Calibration wizard</h2>
+    <div class="progress">
+      <span id="p1"></span><span id="p2"></span><span id="p3"></span><span id="p4"></span>
+    </div>
+
+    <div id="step1" class="wizard-step active">
+      <h3>Find the left motor</h3>
+      <p>Tap each output until the left wheel moves. Keep the rover lifted.</p>
+      <div class="wizard-test-grid">
+        <button data-test-port="0" data-role="left">Test 1</button>
+        <button data-test-port="1" data-role="left">Test 2</button>
+        <button data-test-port="2" data-role="left">Test 3</button>
+      </div>
+      <p class="small-note">Tap the same button again to stop that test.</p>
+    </div>
+
+    <div id="step2" class="wizard-step">
+      <h3>Find the right motor</h3>
+      <p>Tap the output that moves the right wheel.</p>
+      <div class="wizard-test-grid">
+        <button data-test-port="0" data-role="right">Test 1</button>
+        <button data-test-port="1" data-role="right">Test 2</button>
+        <button data-test-port="2" data-role="right">Test 3</button>
+      </div>
+    </div>
+
+    <div id="step3" class="wizard-step">
+      <h3>Find the swing arm</h3>
+      <p>Tap the output that moves the arm.</p>
+      <div class="wizard-test-grid">
+        <button data-test-port="0" data-role="arm">Test 1</button>
+        <button data-test-port="1" data-role="arm">Test 2</button>
+        <button data-test-port="2" data-role="arm">Test 3</button>
+      </div>
+    </div>
+
+    <div id="step4" class="wizard-step">
+      <h3>Motor direction</h3>
+      <p>Use these toggles so pushing the joystick forward drives both wheels forward.</p>
+      <div class="setting-row">
+        <label for="wizardInvertLeft">Invert left motor</label>
+        <input id="wizardInvertLeft" type="checkbox">
+      </div>
+      <div class="setting-row">
+        <label for="wizardInvertRight">Invert right motor</label>
+        <input id="wizardInvertRight" type="checkbox">
+      </div>
+      <button id="testForward" style="width:100%;margin-top:10px;">Test forward</button>
+      <p class="small-note">Press again to stop.</p>
+    </div>
+
+    <div class="modal-actions">
+      <button id="cancelWizard" class="secondary">Cancel</button>
+      <button id="nextWizard" disabled>Next</button>
     </div>
   </div>
 </div>
@@ -369,35 +484,52 @@ let characteristic = null;
 let controlTimer = null;
 let oscillationTimer = null;
 let writing = false;
+let armValue = 128;
 
 let desiredLeft = 0;
 let desiredRight = 0;
-let desiredArm = 128;
+let desiredArm = armValue;
 let lastSentArm = null;
 let forceArmSend = true;
 
+let wizardStep = 1;
+let wizardConfig = {};
+let wizardTestActive = false;
+let wizardTestPort = null;
+
 const connectBtn = document.querySelector('#connect');
-const settingsBtn = document.querySelector('#settingsBtn');
+const setupBtn = document.querySelector('#setupBtn');
 const stopBtn = document.querySelector('#stop');
 const statusEl = document.querySelector('#status');
 const dotEl = document.querySelector('#dot');
 const joystick = document.querySelector('#joystick');
 const knob = document.querySelector('#knob');
-const arm = document.querySelector('#arm');
+const armTrack = document.querySelector('#armTrack');
+const armThumb = document.querySelector('#armThumb');
+const armFill = document.querySelector('#armFill');
 const oscillateBtn = document.querySelector('#oscillate');
 const soundsEl = document.querySelector('#sounds');
 const invertLeft = document.querySelector('#invertLeft');
 const invertRight = document.querySelector('#invertRight');
 
-const settingsModal = document.querySelector('#settingsModal');
+const setupModal = document.querySelector('#setupModal');
 const leftPort = document.querySelector('#leftPort');
 const armPort = document.querySelector('#armPort');
 const rightPort = document.querySelector('#rightPort');
 const portWarning = document.querySelector('#portWarning');
-const saveSettingsBtn = document.querySelector('#saveSettings');
-const cancelSettingsBtn = document.querySelector('#cancelSettings');
+const saveSetupBtn = document.querySelector('#saveSetup');
+const cancelSetupBtn = document.querySelector('#cancelSetup');
+const startWizardBtn = document.querySelector('#startWizard');
+
+const wizardModal = document.querySelector('#wizardModal');
+const nextWizardBtn = document.querySelector('#nextWizard');
+const cancelWizardBtn = document.querySelector('#cancelWizard');
+const wizardInvertLeft = document.querySelector('#wizardInvertLeft');
+const wizardInvertRight = document.querySelector('#wizardInvertRight');
+const testForwardBtn = document.querySelector('#testForward');
 
 applyConfigToUI();
+renderArm();
 
 for (const [name, hex] of Object.entries(SOUNDS)) {
   const b = document.createElement('button');
@@ -434,9 +566,7 @@ function setStatus(text, connected=false) {
 
 function hexToBytes(hex) {
   const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.slice(i*2, i*2+2), 16);
-  }
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.slice(i*2, i*2+2), 16);
   return bytes;
 }
 
@@ -456,11 +586,7 @@ function crc16Xmodem(bytes) {
 function makeOutputCommand(channel, value) {
   const body = new Uint8Array([0x14, 0x02, channel & 0xFF, value & 0xFF]);
   const checksum = crc16Xmodem(body) ^ 0xA239;
-  return new Uint8Array([
-    ...body,
-    (checksum >> 8) & 0xFF,
-    checksum & 0xFF
-  ]);
+  return new Uint8Array([...body, (checksum >> 8) & 0xFF, checksum & 0xFF]);
 }
 
 async function writeBytes(bytes) {
@@ -485,8 +611,12 @@ function speedToValue(speed, invert=false) {
     : Math.round(neutral + s * (neutral - 0x07));
 }
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function sendControlFrame() {
-  if (!characteristic || writing) return;
+  if (!characteristic || writing || wizardTestActive) return;
 
   writing = true;
   try {
@@ -510,10 +640,6 @@ async function sendControlFrame() {
   }
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function startControlLoop() {
   stopControlLoop();
   controlTimer = setInterval(sendControlFrame, 140);
@@ -530,7 +656,6 @@ async function emergencyStop() {
   knob.style.transform = 'translate(0,0)';
 
   while (writing) await delay(10);
-
   if (!characteristic) return;
 
   try {
@@ -567,6 +692,7 @@ async function connect() {
       characteristic = null;
       stopControlLoop();
       stopOscillation();
+      stopWizardTest();
       setStatus('Disconnected');
     });
 
@@ -577,18 +703,19 @@ async function connect() {
 
     desiredLeft = 0;
     desiredRight = 0;
-    desiredArm = Number(arm.value);
+    desiredArm = armValue;
     forceArmSend = true;
 
     setStatus('Connected', true);
     await emergencyStop();
     startControlLoop();
-  } catch (e) {
-    if (e.name === 'NotFoundError') {
-      setStatus('No device selected');
-    } else {
-      showError(e);
+
+    if (!localStorage.getItem('spaceRoverWizardDone')) {
+      openWizard();
     }
+  } catch (e) {
+    if (e.name === 'NotFoundError') setStatus('No device selected');
+    else showError(e);
   }
 }
 
@@ -596,6 +723,7 @@ connectBtn.addEventListener('click', async () => {
   if (device?.gatt?.connected) {
     await emergencyStop();
     stopOscillation();
+    stopWizardTest();
     device.gatt.disconnect();
   } else {
     await connect();
@@ -604,14 +732,44 @@ connectBtn.addEventListener('click', async () => {
 
 stopBtn.addEventListener('click', async () => {
   stopOscillation();
+  stopWizardTest();
   await emergencyStop();
 });
 
-arm.addEventListener('input', () => {
-  stopOscillation();
-  desiredArm = Number(arm.value);
+function renderArm() {
+  const pct = armValue / 255;
+  armThumb.style.bottom = `${pct * 100}%`;
+  armFill.style.height = `${Math.max(3, pct * 100)}%`;
+}
+
+function setArmFromPointer(event) {
+  const rect = armTrack.getBoundingClientRect();
+  let pct = 1 - ((event.clientY - rect.top) / rect.height);
+  pct = Math.max(0, Math.min(1, pct));
+  armValue = Math.round(pct * 255);
+  desiredArm = armValue;
   forceArmSend = true;
+  renderArm();
+}
+
+let armDragging = false;
+armTrack.addEventListener('pointerdown', event => {
+  armDragging = true;
+  document.body.classList.add('control-lock');
+  armTrack.setPointerCapture(event.pointerId);
+  stopOscillation();
+  setArmFromPointer(event);
 });
+armTrack.addEventListener('pointermove', event => {
+  if (armDragging) setArmFromPointer(event);
+});
+function releaseArm() {
+  armDragging = false;
+  document.body.classList.remove('control-lock');
+}
+armTrack.addEventListener('pointerup', releaseArm);
+armTrack.addEventListener('pointercancel', releaseArm);
+armTrack.addEventListener('lostpointercapture', releaseArm);
 
 function startOscillation() {
   if (oscillationTimer) {
@@ -624,8 +782,7 @@ function startOscillation() {
   oscillateBtn.textContent = 'Stop';
 
   oscillationTimer = setInterval(() => {
-    let next = Number(arm.value) + direction * 10;
-
+    let next = armValue + direction * 10;
     if (next >= 245) {
       next = 245;
       direction = -1;
@@ -633,10 +790,10 @@ function startOscillation() {
       next = 10;
       direction = 1;
     }
-
-    arm.value = String(next);
+    armValue = next;
     desiredArm = next;
     forceArmSend = true;
+    renderArm();
   }, 90);
 }
 
@@ -651,18 +808,16 @@ oscillateBtn.addEventListener('click', startOscillation);
 
 function positionFromPointer(event) {
   const r = joystick.getBoundingClientRect();
-  const cx = r.left + r.width / 2;
-  const cy = r.top + r.height / 2;
-
+  const cx = r.left + r.width/2;
+  const cy = r.top + r.height/2;
   let dx = event.clientX - cx;
   let dy = event.clientY - cy;
-
   const travel = r.width * 0.32;
-  const len = Math.hypot(dx, dy);
+  const len = Math.hypot(dx,dy);
 
   if (len > travel) {
-    dx *= travel / len;
-    dy *= travel / len;
+    dx *= travel/len;
+    dy *= travel/len;
   }
 
   knob.style.transform = `translate(${dx}px,${dy}px)`;
@@ -670,7 +825,7 @@ function positionFromPointer(event) {
   const x = dx / travel;
   const y = -dy / travel;
 
-  if (Math.hypot(x, y) < 0.10) {
+  if (Math.hypot(x,y) < 0.10) {
     desiredLeft = 0;
     desiredRight = 0;
     return;
@@ -679,32 +834,29 @@ function positionFromPointer(event) {
   let left = y + x;
   let right = y - x;
   const scale = Math.max(1, Math.abs(left), Math.abs(right));
-
-  desiredLeft = left / scale;
-  desiredRight = right / scale;
+  desiredLeft = left/scale;
+  desiredRight = right/scale;
 }
 
 let dragging = false;
-
 joystick.addEventListener('pointerdown', event => {
   dragging = true;
+  document.body.classList.add('control-lock');
   joystick.setPointerCapture(event.pointerId);
   positionFromPointer(event);
 });
-
 joystick.addEventListener('pointermove', event => {
   if (dragging) positionFromPointer(event);
 });
-
 function releasePointer() {
   if (!dragging) return;
   dragging = false;
+  document.body.classList.remove('control-lock');
   desiredLeft = 0;
   desiredRight = 0;
   knob.style.transform = 'translate(0,0)';
   emergencyStop();
 }
-
 joystick.addEventListener('pointerup', releasePointer);
 joystick.addEventListener('pointercancel', releasePointer);
 joystick.addEventListener('lostpointercapture', releasePointer);
@@ -713,62 +865,210 @@ invertLeft.addEventListener('change', () => {
   config.invertLeft = invertLeft.checked;
   saveConfig();
 });
-
 invertRight.addEventListener('change', () => {
   config.invertRight = invertRight.checked;
   saveConfig();
 });
 
-settingsBtn.addEventListener('click', () => {
+setupBtn.addEventListener('click', () => {
   leftPort.value = String(config.leftPort);
   armPort.value = String(config.armPort);
   rightPort.value = String(config.rightPort);
   portWarning.classList.remove('show');
-  settingsModal.classList.add('open');
+  setupModal.classList.add('open');
 });
 
-cancelSettingsBtn.addEventListener('click', () => {
-  settingsModal.classList.remove('open');
-});
+cancelSetupBtn.addEventListener('click', () => setupModal.classList.remove('open'));
 
-settingsModal.addEventListener('click', event => {
-  if (event.target === settingsModal) {
-    settingsModal.classList.remove('open');
-  }
-});
-
-saveSettingsBtn.addEventListener('click', async () => {
+saveSetupBtn.addEventListener('click', async () => {
   const next = {
     leftPort: Number(leftPort.value),
     armPort: Number(armPort.value),
     rightPort: Number(rightPort.value)
   };
-
-  const unique = new Set([next.leftPort, next.armPort, next.rightPort]);
-  if (unique.size !== 3) {
+  if (new Set([next.leftPort,next.armPort,next.rightPort]).size !== 3) {
     portWarning.classList.add('show');
     return;
   }
 
   await emergencyStop();
   stopOscillation();
-
   config = {
     ...config,
     ...next,
     invertLeft: invertLeft.checked,
     invertRight: invertRight.checked
   };
-
   saveConfig();
   forceArmSend = true;
-  settingsModal.classList.remove('open');
+  setupModal.classList.remove('open');
   setStatus(device?.gatt?.connected ? 'Connected — setup saved' : 'Setup saved', !!device?.gatt?.connected);
+});
+
+startWizardBtn.addEventListener('click', () => {
+  setupModal.classList.remove('open');
+  openWizard();
+});
+
+function openWizard() {
+  wizardStep = 1;
+  wizardConfig = {
+    leftPort:null,
+    rightPort:null,
+    armPort:null,
+    invertLeft:invertLeft.checked,
+    invertRight:invertRight.checked
+  };
+  wizardInvertLeft.checked = wizardConfig.invertLeft;
+  wizardInvertRight.checked = wizardConfig.invertRight;
+  stopWizardTest();
+  updateWizard();
+  wizardModal.classList.add('open');
+}
+
+function updateWizard() {
+  document.querySelectorAll('.wizard-step').forEach((el,i) => {
+    el.classList.toggle('active', i === wizardStep - 1);
+  });
+  for (let i=1;i<=4;i++) {
+    document.querySelector(`#p${i}`).classList.toggle('done', i <= wizardStep);
+  }
+  nextWizardBtn.textContent = wizardStep === 4 ? 'Finish' : 'Next';
+  nextWizardBtn.disabled = (
+    (wizardStep === 1 && wizardConfig.leftPort === null) ||
+    (wizardStep === 2 && wizardConfig.rightPort === null) ||
+    (wizardStep === 3 && wizardConfig.armPort === null)
+  );
+}
+
+async function runWizardTest(port, role) {
+  if (!characteristic) {
+    setStatus('Connect to the rover before calibration');
+    return;
+  }
+
+  if (wizardTestActive && wizardTestPort === port) {
+    await stopWizardTest();
+    return;
+  }
+
+  await stopWizardTest();
+  wizardTestActive = true;
+  wizardTestPort = port;
+
+  if (role === 'arm') {
+    await writeBytes(makeOutputCommand(port, 0xFF));
+    await delay(500);
+    await writeBytes(makeOutputCommand(port, 0x00));
+  } else {
+    await writeBytes(makeOutputCommand(port, 0xB8));
+  }
+
+  if (navigator.vibrate) navigator.vibrate(20);
+}
+
+async function stopWizardTest() {
+  if (!wizardTestActive || wizardTestPort === null || !characteristic) {
+    wizardTestActive = false;
+    wizardTestPort = null;
+    return;
+  }
+  try {
+    await writeBytes(makeOutputCommand(wizardTestPort, 0x89));
+  } catch {}
+  wizardTestActive = false;
+  wizardTestPort = null;
+}
+
+document.querySelectorAll('[data-test-port]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const port = Number(btn.dataset.testPort);
+    const role = btn.dataset.role;
+    await runWizardTest(port, role);
+
+    if (role === 'left') wizardConfig.leftPort = port;
+    if (role === 'right') wizardConfig.rightPort = port;
+    if (role === 'arm') wizardConfig.armPort = port;
+
+    btn.closest('.wizard-test-grid').querySelectorAll('button').forEach(b => b.style.outline = '');
+    btn.style.outline = '2px solid #5d8cff';
+    updateWizard();
+  });
+});
+
+testForwardBtn.addEventListener('click', async () => {
+  if (!characteristic) return;
+  if (wizardTestActive) {
+    await stopWizardTest();
+    testForwardBtn.textContent = 'Test forward';
+    return;
+  }
+
+  wizardConfig.invertLeft = wizardInvertLeft.checked;
+  wizardConfig.invertRight = wizardInvertRight.checked;
+  wizardTestActive = true;
+
+  const lv = speedToValue(0.45, wizardConfig.invertLeft);
+  const rv = speedToValue(0.45, wizardConfig.invertRight);
+
+  await writeBytes(makeOutputCommand(wizardConfig.leftPort, lv));
+  await delay(40);
+  await writeBytes(makeOutputCommand(wizardConfig.rightPort, rv));
+  testForwardBtn.textContent = 'Stop test';
+});
+
+nextWizardBtn.addEventListener('click', async () => {
+  await stopWizardTest();
+
+  if (wizardStep < 4) {
+    wizardStep += 1;
+    updateWizard();
+    return;
+  }
+
+  const ports = [wizardConfig.leftPort,wizardConfig.rightPort,wizardConfig.armPort];
+  if (new Set(ports).size !== 3) {
+    alert('Each robot part must use a different output.');
+    wizardStep = 1;
+    updateWizard();
+    return;
+  }
+
+  config = {
+    leftPort:wizardConfig.leftPort,
+    rightPort:wizardConfig.rightPort,
+    armPort:wizardConfig.armPort,
+    invertLeft:wizardInvertLeft.checked,
+    invertRight:wizardInvertRight.checked
+  };
+  saveConfig();
+  localStorage.setItem('spaceRoverWizardDone','1');
+  applyConfigToUI();
+  wizardModal.classList.remove('open');
+  forceArmSend = true;
+  setStatus('Calibration saved', !!device?.gatt?.connected);
+});
+
+cancelWizardBtn.addEventListener('click', async () => {
+  await stopWizardTest();
+  wizardModal.classList.remove('open');
+});
+
+setupModal.addEventListener('click', event => {
+  if (event.target === setupModal) setupModal.classList.remove('open');
+});
+
+wizardModal.addEventListener('click', async event => {
+  if (event.target === wizardModal) {
+    await stopWizardTest();
+    wizardModal.classList.remove('open');
+  }
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && characteristic) {
     stopOscillation();
+    stopWizardTest();
     emergencyStop();
   }
 });
